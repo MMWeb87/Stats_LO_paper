@@ -1,0 +1,517 @@
+---
+title: "Statistical Analysis of Lana's dataset"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+  pdf_document: default
+  word_document: default
+---
+
+Second version with additional variables
+
+# General notes.
+
+- I call all the IV predictors here. They are in %. i.e. 0.1 = 10%
+- R2 describes the goodness of fit and how much of the data can be fitted by the regression hyperplane. To compensate for different number of predictors, we only use R_adj to compare different models (of different size). Attention: R2 does not say if any predictors explain the data in the model. We can have quite a good R2 but no significant predictors, or predictors with small effects. In the non-significant cases, we can probably still draw a conclusion for the current sample though (but not generalise)
+- The correlations do not say anything about the goodnes of fit of the model in MLR.
+
+
+```{r include=FALSE}
+
+#https://briatte.github.io/ggcorr/
+#a measure of goodness of fit in multiple regression. -> WRONG (unless I'm wrong :-P9. Where do you have that infofrom?
+
+
+library(tidyverse)
+library(ggrepel)
+library(rlang)
+library(countrycode) #check
+library(rrr)
+library(readxl)
+library(ggfortify)
+library(faraway)
+library(broom)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+
+```
+
+
+```{r load data, eval=FALSE, include=FALSE, echo = FALSE}
+# saved in env
+Progress_REN_EE <- read_csv("data_EE_REN.csv")
+
+pre_potential <- read_csv("EE_REN_preexistingpotential.csv")%>%
+  rename (pre_potential_EI = "EI_0510")%>%
+  rename (pre_potential_REN = "REN_2005_percent")
+
+View(pre_potential)
+
+wealth <- read_csv("EE_REN_wealth.csv")
+
+density <- read_csv("EE_REN_density.csv") %>%
+  rename (Policy_density_EE = "percent_EE")%>%
+  rename (Policy_density_REN = "percent_REN")
+
+subsidies <- read_csv("EE_REN_subsidies.csv")%>%
+  rename (subsidies_REN = "percent_REN")%>%
+  rename (subsidies_savings = "percent_savings")
+
+jobs <- read_csv("EE_REN_jobs.csv") %>%
+  rename (Jobs_EE = "mean_percent_EE")%>%
+  rename (Jobs_REN = "mean_percent_REN")
+
+Tech_potential <- read_csv("EE_REN_potential.csv")%>%
+  rename (Jobs_REN = "mean_percent_REN")
+View(Tech_potential)
+
+Policy_type <- read_csv("EE_REN_policytype.csv")
+
+Policy_targets <- read_csv("targets_EE_REN.csv")%>%
+  select (Country, NREAP_target, target_FEC_renewed)
+
+#combining for analysis
+
+
+```
+
+```{r load data (from env), echo = FALSE}
+#load(file = "Regression_Environment_II.RData")
+#load(file = "Data_Paper II.RData")
+
+#load("Environment_20200714.RData")
+load(file = "Environment_20200730.RData")
+
+
+# remmove all but the combined_analysis needed here
+rm(list=setdiff(ls(), "combined_analysis"))
+
+```
+
+```{r load functions, include=FALSE}
+source("functions.R")
+
+partial_models <- list()
+partial_models[["RE"]] <- list()
+partial_models[["EE"]] <- list()
+partial_models[["RE_amb"]] <- list()
+partial_models[["EE_amb"]] <- list()
+
+full_models <- list()
+full_models[["RE"]] <- list()
+full_models[["EE"]] <- list()
+full_models[["RE_amb"]] <- list()
+full_models[["EE_amb"]] <- list()
+
+formulas <- list()
+
+```
+
+
+# Data
+
+## Data view
+
+Let's have a look at the original data. We remove several variables that, from a theortical consideration, are not relevant (and would sometimes cause collinearity) We also transform some values to a standard % format. 
+
+```{r dataview}
+#View(combined_analysis)
+summary(combined_analysis)
+
+combined_analysis_transformed <- combined_analysis %>% 
+  mutate(
+    pre_potential_EI = pre_potential_EI / 100)
+  # ) %>% 
+  # select(-subsidies_savings, - subsidies_REN, -percent_REN_economic, -percent_EE_economic, -percent_REN_planning, -percent_EE_planning)
+
+summary(combined_analysis_transformed)
+
+```
+
+
+```{r translation tables, include=FALSE}
+# Here we change the column names and prepare the dataframes. Assignements can now be adjusted in the Excel file.
+
+all_variables_translation_table <- read_excel(path = "MLR_variables.xlsx")
+
+# Select all variables in col_names_for_RE	col_names_for_EE, and prepare for renaming
+
+all_variables <- list()
+traslation_tables <- list()
+
+# Select RE
+all_variables[["RE"]] <- all_variables_translation_table %>% 
+  filter(!is.na(col_names_for_RE)) %>% 
+  select(col_name = col_names_for_RE, symbol)
+
+traslation_tables[["RE"]] <- all_variables[["RE"]]$col_name
+names(traslation_tables[["RE"]]) <- all_variables[["RE"]]$symbol
+
+# Select EE
+all_variables[["EE"]] <- all_variables_translation_table %>% 
+  filter(!is.na(col_names_for_EE)) %>% 
+  select(col_name = col_names_for_EE, symbol)
+
+traslation_tables[["EE"]] <- all_variables[["EE"]]$col_name
+names(traslation_tables[["EE"]]) <- all_variables[["EE"]]$symbol
+
+
+## Gather and rename
+                                           
+combined_analysis_gathered <- combined_analysis_transformed %>% 
+  select(-prioritization_scale, -Prio_EE_REN) %>% 
+  gather(key = "variable", value = "value", one_of(all_variables$RE$col_name, all_variables$EE$col_name)) 
+
+Ren_both_effects <- list()
+Ren_both_effects[["long"]] <- combined_analysis_gathered %>% 
+  filter(variable %in% c(all_variables$RE$col_name)) %>% 
+  mutate(variable = fct_recode(variable, !!!traslation_tables$RE))
+
+Ren_both_effects[["wide"]] <- Ren_both_effects[["long"]]  %>% 
+  select(country_code, variable, value) %>% 
+  spread(key = "variable", value = "value")
+
+EE_both_effects <- list()
+EE_both_effects[["long"]]  <- combined_analysis_gathered %>% 
+  filter(variable %in% c(all_variables$EE$col_name)) %>% 
+  mutate(variable = fct_recode(variable, !!!traslation_tables$EE))
+
+EE_both_effects[["wide"]] <- EE_both_effects[["long"]]  %>% 
+  select(country_code, variable, value) %>% 
+  spread(key = "variable", value = "value")
+
+
+all_variables_translation_table %>% 
+  select(symbol, variable)
+
+variable_names <- all_variables_translation_table$variable
+names(variable_names) <- all_variables_translation_table$symbol
+
+
+```
+
+## Remove missing cases
+
+First we need to remove missing cases.
+
+```{r echo=FALSE}
+
+#View(combined_analysis)
+
+# Netherlands is missing
+
+# From here on use wide format due to R methods.
+ 
+EE_both_effects[["wide_no_na"]] <- na.omit(EE_both_effects[["wide"]])
+paste("For EE data: Of", nrow(EE_both_effects$wide),"cases", nrow(EE_both_effects$wide_no_na),"are left due to missing data,")
+
+# let's take this sample
+
+
+Ren_both_effects[["wide_no_na"]] <- na.omit(Ren_both_effects[["wide"]]) %>% 
+  filter(country_code %in% EE_both_effects[["wide_no_na"]]$country_code)
+
+paste("For REN data: Of", nrow(Ren_both_effects$wide),"cases", nrow(Ren_both_effects$wide_no_na),"are left due to missing data,")
+
+
+tibble(
+  countries = EE_both_effects[["wide"]]$country_code,
+  in_sample = EE_both_effects[["wide"]]$country_code %in% EE_both_effects[["wide_no_na"]]$country_code
+) %>% 
+  mutate(
+    in_sample = if_else(in_sample, "In the finale sample", "Missing")
+  ) %>% 
+  tab_df()
+
+
+
+# Subsample for checking the robustness of the model
+
+ggplot(data = EE_both_effects[["wide_no_na"]], mapping = aes(x = S_size_services, y = EE_perf)) +
+  geom_point() + 
+  geom_smooth(method = "lm")
+```
+
+
+Some data is missing that we can't use in MLR, but most is there. Missing is percent_largest_generator for netherlands e.g..
+TODO
+
+## Marginal plots
+
+Let's have a look at the data using marginal plots. This helps to see if any (potential) predictores are skewed. If this is the case, log() transformation will be applied in the regression model, which is a standard procedure to improve the model.
+
+```{r marginal plot, echo=FALSE, message=FALSE, warning=FALSE}
+
+Ren_both_effects %>%
+  pluck("long") %>% 
+  ggplot(mapping = aes(x = value)) +
+    geom_histogram()+
+    facet_wrap("variable", scales = "free") +
+    labs(title = "Marginal plots for REN data")
+
+
+EE_both_effects %>%
+  pluck("long") %>% 
+  ggplot(mapping = aes(x = value)) +
+    geom_histogram()+
+    facet_wrap("variable", scales = "free") +
+    labs(title = "Marginal plots for EE data")
+
+```
+
+For the analysis of the RE data: P_ambition and S_coal are skewed to the right.
+
+```{r variable transformation}
+
+
+
+Ren_both_effects[["wide_no_na"]] <- Ren_both_effects[["wide_no_na"]]
+
+
+EE_both_effects[["wide_no_na"]] <- EE_both_effects[["wide_no_na"]]
+
+```
+
+After transformation, it is still very skewed. Probably not good results if used. 
+ 
+# 1. REN Performance
+
+## Full model construction 
+
+This model contains all possible IVs.
+
+```{r full model with transformation}
+
+# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
+#     P_density + P_ambition + P_REN +
+#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr)
+# 
+# full_models[["RE"]][["01_untransformed"]] <- lm(
+#   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
+# summary(full_models$RE$`01_untransformed`)
+
+# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
+#     P_density + P_ambition + P_REN +
+#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
+
+formulas[["REN_perf_full"]] <- formula(RE_perf ~  
+    P_density + P_ambition + P_REN +
+     S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
+
+full_models[["RE"]][["01_untransformed"]] <- lm(
+  formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
+
+
+summary(full_models$RE$`01_untransformed`)
+
+```
+
+
+## Collinearity check
+
+The selection of variables is essential. The preferred way is to have some theorethical knowledge from other studies. For a good model, there must no be any large collinearitie between variables.
+
+```{r correlation check, warning=FALSE, echo=FALSE}
+GGally::ggcorr(Ren_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2, label_size = 3, legend.position = "bottom", legend.size = 10)
+
+```
+
+All correlations above 0.8 are problematic. We don't find any. Let's also check this numerically based on the full (transfomred) model.
+
+```{r}
+vif(full_models$RE$`01_untransformed`)
+```
+VIF above 5 is critical and above 10 dangerous. S_GAV and S_effort are slightly collinear, but no critical VIFs. We do not need to exclude any of our IVs.
+
+## Math variable selection
+
+Let's apply a stepwise backward selectin of variables to the full model to improve things.
+
+WARGNING: According to my stats script, "There is a general rule of the thumb, saying that there should be at least 5 times as many observations as the number of coefficients that are estimated.". I.e. based on the 8 IV, there should be 40 observations, however, we only have 25 observations, so effectively this type of selection may not yield a good result, and hence we will also perfom stepwise selections with other subsamples (see below).
+
+
+```{r}
+full_models[["RE"]][["03_selected"]] <- step(
+  full_models[["RE"]][["01_untransformed"]], direction = "backward", trace = 0)
+summary(full_models[["RE"]][["03_selected"]])
+
+```
+
+## Checking Model assumptions
+
+It is very important that some assumptions are fulfilled. Otherwise, the findings may be wrong and can not be generalised. 
+
+
+```{r}
+resplot(full_models[["RE"]][["03_selected"]])
+```
+
+- Plot 1: The average error is probably 0 (within random resampled lines), which is good. There is no systematic error.
+- Plot 2: Redsiduals are normall distributed, which is good 
+- Plot 3: There seems to be heteroskedasity, but random resampling suggests that this line could have be gotten by chance.
+- Plot 4: There aren't many influenctial cases. Good
+
+All in all, statistical assumptions are fulfilled an the conclusions drawn from it are robust.
+
+
+```{r full model with transformation}
+
+# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
+#     P_density + P_ambition + P_REN +
+#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr)
+# 
+# full_models[["RE"]][["01_untransformed"]] <- lm(
+#   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
+# summary(full_models$RE$`01_untransformed`)
+
+# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
+#     P_density + P_ambition + P_REN +
+#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
+
+full_models[["RE"]][["01_manual"]] <- lm(
+  RE_perf ~  S_size_services, data = Ren_both_effects[["wide_no_na"]])
+
+summary(full_models$RE$`01_manual`)
+
+```
+
+# 2. EE Performance 
+
+## Full model construction 
+
+This model contains all possible IVs.
+
+```{r}
+
+formulas[["EE_perf_full"]] <- formula(EE_perf ~  
+    P_density + P_ambition + P_REN +
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry)
+
+# GDP may be collinear
+# formulas[["EE_perf_full"]] <- formula(EE_perf ~  
+#     P_density + P_ambition + P_REN +
+#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_industry + S_size_services)
+
+full_models[["EE"]][["01_untransformed"]] <- lm(
+  formula = formulas[["EE_perf_full"]] , data = EE_both_effects[["wide_no_na"]])
+
+summary(full_models$EE$`01_untransformed`)
+```
+
+
+## Collinearity check
+
+```{r correlation check EE, warning=FALSE}
+GGally::ggcorr(EE_both_effects$wide_no_na %>% select(-EE_perf), nbreaks = 5, label = TRUE, size = 2,label_size = 3, legend.position = "bottom", legend.size = 15)  +
+  ggtitle ("Policy & socio-economic effects on EE progress")
+
+```
+
+```{r}
+vif(full_models$EE$`01_untransformed`)
+```
+
+S_potential may be slightly collinear with S_GDP, however it's still below 10
+
+## Math variable selection
+
+Let's apply a stepwise backward selection of variables to the full model.
+
+
+```{r}
+full_models[["EE"]][["03_selected"]] <- step(full_models[["EE"]][["01_untransformed"]], direction = "backward", trace = 0)
+summary(full_models[["EE"]][["03_selected"]])
+
+```
+
+
+
+## Checking Model assumptions
+
+```{r}
+resplot(full_models[["EE"]][["03_selected"]])
+```
+
+
+```{r}
+
+# Check outlier
+EE_both_effects[["wide_no_na"]] %>% 
+  slice(c(20, 16))
+
+```
+
+
+
+
+```{r full model with transformation}
+
+# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
+#     P_density + P_ambition + P_REN +
+#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr)
+# 
+# full_models[["RE"]][["01_untransformed"]] <- lm(
+#   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
+# summary(full_models$RE$`01_untransformed`)
+
+# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
+#     P_density + P_ambition + P_REN +
+#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
+
+
+# P_ambition      -3.035e-01  1.232e-01  -2.463 0.033479 *  
+# P_REN            2.705e-03  9.322e-04   2.901 0.015800 *  
+# S_GAV            4.474e+00  1.502e+00   2.978 0.013867 *  
+# S_effort        -5.731e+01  1.800e+01  -3.184 0.009746 ** 
+# S_PPS           -2.624e-03  5.677e-04  -4.621 0.000949 ***
+# S_size_services -1.063e+00  3.725e-01  -2.854 0.017129 *  
+# S_size_industry -7.841e-01  2.639e-01  -2.971 0.014028 *  
+# ---
+  
+  
+full_models[["RE"]][["01_manual"]] <- lm(
+  EE_perf ~  S_PPS, data = EE_both_effects[["wide_no_na"]])
+
+summary(full_models$RE$`01_manual`)
+
+```
+# Method
+
+We collected data for 28 countries for 3 dependent (DP), and X potentially explaning independent variables (IV); see table X. As some data was missing for some countries, we constructed multiple linear regression (MLR) models for 23 countreis to explain REN performance/ambition and 22 countries to explain EE performance/ambition. To avoid any collinearity, we analysed correlations between all independent variables (IV) and calculated variance inflation factors, but did not need to exclude any of the IV due to collinearity.
+
+We constructed tested several models: 
+- Full models include all of the IVs in Table X and the corresponding DV
+-	Optimised models are constructed using a mathematical selection algorithm, namely a stepwise backward selection of variables which reduces a model’s AIC.
+-	Policy models are only constructed using the policy group variables
+-	Economic-context models are only constructed using the economic-context group variables
+
+To check MLR assumptions, we analysed residual plots (Tukey-Anscombe, normal, scale-location and leverage plot). We used a random resampling approach to support our assumption analysis; i.e. we resampled new residuals to the existing fitted values, and hence were able to tell if any deviation from the optimal regression assumptions were systematic or random.
+
+We use the 10% significance level, as also done by... TODO!
+
+LANA: I did some more analyses, if necessary they can also be added, but for now I would not include them.
+
+# Data
+
+The data for the variables in Table X is a sample of all European countries. Hence, the sample is complete in terms of geographical coverage. However, due to missing values for certain variables, some countries could not be used in the MLR model construction. Also, the variables are often averaged values of certain years, and other samples may exist that are based on other years. Hence the main purpose of this statistical analysis is first to uncover which models could explain our DVs, and second, wheter these models are also valid if other samples were constructed.
+
+# Findings
+
+
+```{r}
+
+
+tab_model(
+  full_models$RE$`03_selected`, full_models$EE$`03_selected`, 
+  dv.labels = c("RE performance", "EE performance"),
+  pred.labels = variable_names,
+  title = "Explaining REN Performance",
+  p.style = "stars",
+  show.std = TRUE,
+  p.threshold = c(0.1, 0.05, 0.01),
+  digits = 3)
+```
+
