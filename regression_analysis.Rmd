@@ -1,5 +1,6 @@
 ---
 title: "Statistical Analysis of Lana's dataset"
+subtitle: "v2"
 output:
   html_document:
     df_print: paged
@@ -17,7 +18,7 @@ Second version with additional variables
 - The correlations do not say anything about the goodnes of fit of the model in MLR.
 
 
-```{r include=FALSE}
+```{r load, include=FALSE}
 
 #https://briatte.github.io/ggcorr/
 #a measure of goodness of fit in multiple regression. -> WRONG (unless I'm wrong :-P9. Where do you have that infofrom?
@@ -283,23 +284,11 @@ After transformation, it is still very skewed. Probably not good results if used
 
 This model contains all possible IVs.
 
-```{r full model with transformation}
-
-# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
-#     P_density + P_ambition + P_REN +
-#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr)
-# 
-# full_models[["RE"]][["01_untransformed"]] <- lm(
-#   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
-# summary(full_models$RE$`01_untransformed`)
-
-# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
-#     P_density + P_ambition + P_REN +
-#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
+```{r}
 
 formulas[["REN_perf_full"]] <- formula(RE_perf ~  
     P_density + P_ambition + P_REN +
-     S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
+    S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
 
 full_models[["RE"]][["01_untransformed"]] <- lm(
   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
@@ -314,9 +303,8 @@ summary(full_models$RE$`01_untransformed`)
 
 The selection of variables is essential. The preferred way is to have some theorethical knowledge from other studies. For a good model, there must no be any large collinearitie between variables.
 
-```{r correlation check, warning=FALSE, echo=FALSE}
+```{r, warning=FALSE, echo=FALSE}
 GGally::ggcorr(Ren_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2, label_size = 3, legend.position = "bottom", legend.size = 10)
-
 ```
 
 All correlations above 0.8 are problematic. We don't find any. Let's also check this numerically based on the full (transfomred) model.
@@ -356,28 +344,6 @@ resplot(full_models[["RE"]][["03_selected"]])
 
 All in all, statistical assumptions are fulfilled an the conclusions drawn from it are robust.
 
-
-```{r full model with transformation}
-
-# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
-#     P_density + P_ambition + P_REN +
-#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr)
-# 
-# full_models[["RE"]][["01_untransformed"]] <- lm(
-#   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
-# summary(full_models$RE$`01_untransformed`)
-
-# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
-#     P_density + P_ambition + P_REN +
-#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
-
-full_models[["RE"]][["01_manual"]] <- lm(
-  RE_perf ~  S_size_services, data = Ren_both_effects[["wide_no_na"]])
-
-summary(full_models$RE$`01_manual`)
-
-```
-
 # 2. EE Performance 
 
 ## Full model construction 
@@ -388,12 +354,7 @@ This model contains all possible IVs.
 
 formulas[["EE_perf_full"]] <- formula(EE_perf ~  
     P_density + P_ambition + P_REN +
-    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry)
-
-# GDP may be collinear
-# formulas[["EE_perf_full"]] <- formula(EE_perf ~  
-#     P_density + P_ambition + P_REN +
-#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_industry + S_size_services)
+    S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry)
 
 full_models[["EE"]][["01_untransformed"]] <- lm(
   formula = formulas[["EE_perf_full"]] , data = EE_both_effects[["wide_no_na"]])
@@ -404,7 +365,7 @@ summary(full_models$EE$`01_untransformed`)
 
 ## Collinearity check
 
-```{r correlation check EE, warning=FALSE}
+```{r, warning=FALSE}
 GGally::ggcorr(EE_both_effects$wide_no_na %>% select(-EE_perf), nbreaks = 5, label = TRUE, size = 2,label_size = 3, legend.position = "bottom", legend.size = 15)  +
   ggtitle ("Policy & socio-economic effects on EE progress")
 
@@ -428,84 +389,138 @@ summary(full_models[["EE"]][["03_selected"]])
 ```
 
 
-
 ## Checking Model assumptions
 
 ```{r}
 resplot(full_models[["EE"]][["03_selected"]])
 ```
 
-
 ```{r}
-
 # Check outlier
 EE_both_effects[["wide_no_na"]] %>% 
-  slice(c(20, 16))
-
+  slice(c(14, 6))
 ```
 
 
 
+# 3. REN Ambition
 
-```{r full model with transformation}
+## Full model construction 
 
-# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
-#     P_density + P_ambition + P_REN +
-#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr)
-# 
-# full_models[["RE"]][["01_untransformed"]] <- lm(
-#   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
-# summary(full_models$RE$`01_untransformed`)
-
-# formulas[["REN_perf_full"]] <- formula(RE_perf ~  
-#     P_density + P_ambition + P_REN +
-#     S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
-
-
-# P_ambition      -3.035e-01  1.232e-01  -2.463 0.033479 *  
-# P_REN            2.705e-03  9.322e-04   2.901 0.015800 *  
-# S_GAV            4.474e+00  1.502e+00   2.978 0.013867 *  
-# S_effort        -5.731e+01  1.800e+01  -3.184 0.009746 ** 
-# S_PPS           -2.624e-03  5.677e-04  -4.621 0.000949 ***
-# S_size_services -1.063e+00  3.725e-01  -2.854 0.017129 *  
-# S_size_industry -7.841e-01  2.639e-01  -2.971 0.014028 *  
-# ---
-  
-  
-full_models[["RE"]][["01_manual"]] <- lm(
-  EE_perf ~  S_PPS, data = EE_both_effects[["wide_no_na"]])
-
-summary(full_models$RE$`01_manual`)
-
-```
-# Method
-
-We collected data for 28 countries for 3 dependent (DP), and X potentially explaning independent variables (IV); see table X. As some data was missing for some countries, we constructed multiple linear regression (MLR) models for 23 countreis to explain REN performance/ambition and 22 countries to explain EE performance/ambition. To avoid any collinearity, we analysed correlations between all independent variables (IV) and calculated variance inflation factors, but did not need to exclude any of the IV due to collinearity.
-
-We constructed tested several models: 
-- Full models include all of the IVs in Table X and the corresponding DV
--	Optimised models are constructed using a mathematical selection algorithm, namely a stepwise backward selection of variables which reduces a model’s AIC.
--	Policy models are only constructed using the policy group variables
--	Economic-context models are only constructed using the economic-context group variables
-
-To check MLR assumptions, we analysed residual plots (Tukey-Anscombe, normal, scale-location and leverage plot). We used a random resampling approach to support our assumption analysis; i.e. we resampled new residuals to the existing fitted values, and hence were able to tell if any deviation from the optimal regression assumptions were systematic or random.
-
-We use the 10% significance level, as also done by... TODO!
-
-LANA: I did some more analyses, if necessary they can also be added, but for now I would not include them.
-
-# Data
-
-The data for the variables in Table X is a sample of all European countries. Hence, the sample is complete in terms of geographical coverage. However, due to missing values for certain variables, some countries could not be used in the MLR model construction. Also, the variables are often averaged values of certain years, and other samples may exist that are based on other years. Hence the main purpose of this statistical analysis is first to uncover which models could explain our DVs, and second, wheter these models are also valid if other samples were constructed.
-
-# Findings
-
+This model contains all possible IVs.
 
 ```{r}
 
+full_models[["RE_amb"]][["01_untransformed"]] <- lm(
+  P_ambition ~ 
+    P_density + P_REN + 
+    S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry, 
+  data = Ren_both_effects[["wide_no_na"]])
 
+summary(full_models$RE_amb$`01_untransformed`)
+```
+
+
+## Collinearity check
+
+```{r, warning=FALSE}
+GGally::ggcorr(Ren_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2,label_size = 3, legend.position = "bottom", legend.size = 15)
+
+```
+
+```{r}
+vif(full_models$RE_amb$`01_untransformed`)
+```
+
+S_potential may be slightly collinear with S_effort, however it's still below 10. So not extremely problematic, but a bit if both variables will be in the final model.
+
+## Math variable selection
+
+Let's apply a stepwise backward selection of variables to the full model.
+
+
+```{r}
+full_models[["RE_amb"]][["03_selected"]] <- step(full_models[["RE_amb"]][["01_untransformed"]], direction = "backward", trace = 0)
+summary(full_models[["RE_amb"]][["03_selected"]])
+
+```
+
+
+## Checking Model assumptions
+
+```{r}
+resplot(full_models[["RE_amb"]][["03_selected"]])
+```
+
+I'm not sure that we can trust this model. The Tukey-Anscombe plot is definitely skewed, despite being in the resampled area. Also there is a highly influential outlier (HR).
+
+```{r}
+# Check outlier
+Ren_both_effects[["wide_no_na"]] %>% 
+  slice(c(11))
+```
+
+
+
+
+
+# 4. REN Ambition
+
+## Full model construction 
+
+This model contains all possible IVs.
+
+```{r}
+
+full_models[["EE_amb"]][["01_untransformed"]] <- lm(
+  P_ambition ~ 
+    P_density + P_REN + 
+    S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry, 
+  data = EE_both_effects[["wide_no_na"]])
+
+summary(full_models$EE_amb$`01_untransformed`)
+```
+
+
+## Collinearity check
+
+```{r, warning=FALSE}
+GGally::ggcorr(EE_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2,label_size = 3, legend.position = "bottom", legend.size = 15)
+
+```
+
+```{r}
+vif(full_models$EE_amb$`01_untransformed`)
+```
+
+S_potential is higher than 10, this is problematic if it is in the final model
+
+
+## Math variable selection
+Let's apply a stepwise backward selection of variables to the full model.
+
+
+```{r}
+full_models[["EE_amb"]][["03_selected"]] <- step(full_models[["EE_amb"]][["01_untransformed"]], direction = "backward", trace = 0)
+summary(full_models[["EE_amb"]][["03_selected"]])
+
+```
+
+S_potential not in the final model, so collinearity issue not a problem here.
+
+## Checking Model assumptions
+
+```{r}
+resplot(full_models[["EE_amb"]][["03_selected"]])
+```
+
+These assumption plots look better. No highly influential outliers
+
+# Overview tables
+
+```{r}
 tab_model(
-  full_models$RE$`03_selected`, full_models$EE$`03_selected`, 
+  full_models$RE$`03_selected`, full_models$EE$`03_selected`,
   dv.labels = c("RE performance", "EE performance"),
   pred.labels = variable_names,
   title = "Explaining REN Performance",
@@ -515,3 +530,15 @@ tab_model(
   digits = 3)
 ```
 
+
+```{r}
+tab_model(
+  full_models$RE_amb$`03_selected`, full_models$EE_amb$`03_selected`,
+  dv.labels = c("RE ambition", "EE ambition"),
+  pred.labels = variable_names,
+  title = "Explaining REN Ambition",
+  p.style = "stars",
+  show.std = TRUE,
+  p.threshold = c(0.1, 0.05, 0.01),
+  digits = 3)
+```
