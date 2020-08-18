@@ -1,6 +1,6 @@
 ---
 title: "Statistical Analysis of Lana's dataset"
-subtitle: "v2"
+subtitle: "v3"
 output:
   html_document:
     df_print: paged
@@ -288,7 +288,7 @@ This model contains all possible IVs.
 
 formulas[["REN_perf_full"]] <- formula(RE_perf ~  
     P_density + P_ambition + P_REN +
-    S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
+    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
 
 full_models[["RE"]][["01_untransformed"]] <- lm(
   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
@@ -354,7 +354,7 @@ This model contains all possible IVs.
 
 formulas[["EE_perf_full"]] <- formula(EE_perf ~  
     P_density + P_ambition + P_REN +
-    S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry)
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry)
 
 full_models[["EE"]][["01_untransformed"]] <- lm(
   formula = formulas[["EE_perf_full"]] , data = EE_both_effects[["wide_no_na"]])
@@ -375,7 +375,6 @@ GGally::ggcorr(EE_both_effects$wide_no_na %>% select(-EE_perf), nbreaks = 5, lab
 vif(full_models$EE$`01_untransformed`)
 ```
 
-S_potential may be slightly collinear with S_GDP, however it's still below 10
 
 ## Math variable selection
 
@@ -414,7 +413,7 @@ This model contains all possible IVs.
 full_models[["RE_amb"]][["01_untransformed"]] <- lm(
   P_ambition ~ 
     P_density + P_REN + 
-    S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry, 
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry, 
   data = Ren_both_effects[["wide_no_na"]])
 
 summary(full_models$RE_amb$`01_untransformed`)
@@ -464,7 +463,7 @@ Ren_both_effects[["wide_no_na"]] %>%
 
 
 
-# 4. REN Ambition
+# 4. EE Ambition
 
 ## Full model construction 
 
@@ -475,7 +474,7 @@ This model contains all possible IVs.
 full_models[["EE_amb"]][["01_untransformed"]] <- lm(
   P_ambition ~ 
     P_density + P_REN + 
-    S_GDP + S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry, 
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry, 
   data = EE_both_effects[["wide_no_na"]])
 
 summary(full_models$EE_amb$`01_untransformed`)
