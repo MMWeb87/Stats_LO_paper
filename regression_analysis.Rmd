@@ -1,6 +1,6 @@
 ---
 title: "Statistical Analysis of Lana's dataset"
-subtitle: "v3"
+subtitle: "v4"
 output:
   html_document:
     df_print: paged
@@ -288,7 +288,7 @@ This model contains all possible IVs.
 
 formulas[["REN_perf_full"]] <- formula(RE_perf ~  
     P_density + P_ambition + P_REN +
-    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_size_industry + S_size_services)
+    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_GDP)
 
 full_models[["RE"]][["01_untransformed"]] <- lm(
   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
@@ -354,10 +354,12 @@ This model contains all possible IVs.
 
 formulas[["EE_perf_full"]] <- formula(EE_perf ~  
     P_density + P_ambition + P_REN +
-    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry)
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_GDP)
 
 full_models[["EE"]][["01_untransformed"]] <- lm(
   formula = formulas[["EE_perf_full"]] , data = EE_both_effects[["wide_no_na"]])
+  
+#filter(!(country_code %in% c("RO","EE"))
 
 summary(full_models$EE$`01_untransformed`)
 ```
@@ -397,7 +399,7 @@ resplot(full_models[["EE"]][["03_selected"]])
 ```{r}
 # Check outlier
 EE_both_effects[["wide_no_na"]] %>% 
-  slice(c(14, 6))
+  slice(c(16, 6))
 ```
 
 
@@ -413,8 +415,10 @@ This model contains all possible IVs.
 full_models[["RE_amb"]][["01_untransformed"]] <- lm(
   P_ambition ~ 
     P_density + P_REN + 
-    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry, 
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_GDP, 
   data = Ren_both_effects[["wide_no_na"]])
+
+#filter(country_code != "HR")
 
 summary(full_models$RE_amb$`01_untransformed`)
 ```
@@ -451,15 +455,13 @@ summary(full_models[["RE_amb"]][["03_selected"]])
 resplot(full_models[["RE_amb"]][["03_selected"]])
 ```
 
-I'm not sure that we can trust this model. The Tukey-Anscombe plot is definitely skewed, despite being in the resampled area. Also there is a highly influential outlier (HR).
+I'm not sure that we can trust this model. The Tukey-Anscombe plot is skewed, probably because of a highly influential outlier (HR).
 
 ```{r}
 # Check outlier
 Ren_both_effects[["wide_no_na"]] %>% 
   slice(c(11))
 ```
-
-
 
 
 
@@ -474,7 +476,7 @@ This model contains all possible IVs.
 full_models[["EE_amb"]][["01_untransformed"]] <- lm(
   P_ambition ~ 
     P_density + P_REN + 
-    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_size_services + S_size_industry, 
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_GDP, 
   data = EE_both_effects[["wide_no_na"]])
 
 summary(full_models$EE_amb$`01_untransformed`)
@@ -492,7 +494,7 @@ GGally::ggcorr(EE_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2,l
 vif(full_models$EE_amb$`01_untransformed`)
 ```
 
-S_potential is higher than 10, this is problematic if it is in the final model
+S_potential could be collinear with S_GDP
 
 
 ## Math variable selection
@@ -505,7 +507,7 @@ summary(full_models[["EE_amb"]][["03_selected"]])
 
 ```
 
-S_potential not in the final model, so collinearity issue not a problem here.
+S_potential and S_GDP not in the final model, so collinearity issue not a problem here.
 
 ## Checking Model assumptions
 
@@ -513,7 +515,7 @@ S_potential not in the final model, so collinearity issue not a problem here.
 resplot(full_models[["EE_amb"]][["03_selected"]])
 ```
 
-These assumption plots look better. No highly influential outliers
+These assumption plots are not ideal, but no highly influential outliers.
 
 # Overview tables
 
