@@ -9,3 +9,6 @@ Added ambitions variables again. Also, added GPD var to full model (it was colli
 
 Added S_GPD and also make two analyses with removed outlier.
 
+## V5
+
+Changed IV and DVs
