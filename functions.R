@@ -109,3 +109,4 @@ get_fstats <- function(model){
   pf(x[1],x[2],x[3],lower.tail=FALSE)
   
 }
+

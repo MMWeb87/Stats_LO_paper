@@ -1,6 +1,6 @@
 ---
 title: "Statistical Analysis of Lana's dataset"
-subtitle: "v4"
+subtitle: "v5"
 output:
   html_document:
     df_print: paged
@@ -9,7 +9,15 @@ output:
   word_document: default
 ---
 
-Second version with additional variables
+# Install
+
+To download all needed packages, execute renv::restore() the first time:
+
+```{r}
+#renv::restore()
+```
+
+
 
 # General notes.
 
@@ -20,23 +28,12 @@ Second version with additional variables
 
 ```{r load, include=FALSE}
 
-#https://briatte.github.io/ggcorr/
-#a measure of goodness of fit in multiple regression. -> WRONG (unless I'm wrong :-P9. Where do you have that infofrom?
-
-
 library(tidyverse)
-library(ggrepel)
-library(rlang)
-library(countrycode) #check
-library(rrr)
 library(readxl)
-library(ggfortify)
-library(faraway)
-library(broom)
+
 library(sjPlot)
 library(sjmisc)
 library(sjlabelled)
-
 
 ```
 
@@ -84,8 +81,7 @@ Policy_targets <- read_csv("targets_EE_REN.csv")%>%
 #load(file = "Data_Paper II.RData")
 
 #load("Environment_20200714.RData")
-load(file = "Environment_20200730.RData")
-
+load(file = "environment_20200909.RData")
 
 # remmove all but the combined_analysis needed here
 rm(list=setdiff(ls(), "combined_analysis"))
@@ -98,19 +94,22 @@ source("functions.R")
 partial_models <- list()
 partial_models[["RE"]] <- list()
 partial_models[["EE"]] <- list()
+partial_models[["RE_perf_abs"]] <- list()
+partial_models[["EE_perf_abs"]] <- list()
 partial_models[["RE_amb"]] <- list()
 partial_models[["EE_amb"]] <- list()
 
 full_models <- list()
 full_models[["RE"]] <- list()
 full_models[["EE"]] <- list()
+full_models[["RE_perf_abs"]] <- list()
+full_models[["EE_perf_abs"]] <- list()
 full_models[["RE_amb"]] <- list()
 full_models[["EE_amb"]] <- list()
 
 formulas <- list()
 
 ```
-
 
 # Data
 
@@ -119,14 +118,11 @@ formulas <- list()
 Let's have a look at the original data. We remove several variables that, from a theortical consideration, are not relevant (and would sometimes cause collinearity) We also transform some values to a standard % format. 
 
 ```{r dataview}
-#View(combined_analysis)
-summary(combined_analysis)
+#summary(combined_analysis)
 
 combined_analysis_transformed <- combined_analysis %>% 
   mutate(
     pre_potential_EI = pre_potential_EI / 100)
-  # ) %>% 
-  # select(-subsidies_savings, - subsidies_REN, -percent_REN_economic, -percent_EE_economic, -percent_REN_planning, -percent_EE_planning)
 
 summary(combined_analysis_transformed)
 
@@ -168,7 +164,7 @@ combined_analysis_gathered <- combined_analysis_transformed %>%
 
 Ren_both_effects <- list()
 Ren_both_effects[["long"]] <- combined_analysis_gathered %>% 
-  filter(variable %in% c(all_variables$RE$col_name)) %>% 
+  filter(variable %in% c(all_variables$RE$col_name)) %>% #remove variables that are not in MLR_variables.xls
   mutate(variable = fct_recode(variable, !!!traslation_tables$RE))
 
 Ren_both_effects[["wide"]] <- Ren_both_effects[["long"]]  %>% 
@@ -177,7 +173,7 @@ Ren_both_effects[["wide"]] <- Ren_both_effects[["long"]]  %>%
 
 EE_both_effects <- list()
 EE_both_effects[["long"]]  <- combined_analysis_gathered %>% 
-  filter(variable %in% c(all_variables$EE$col_name)) %>% 
+  filter(variable %in% c(all_variables$EE$col_name)) %>% #remove variables that are not in MLR_variables.xls 
   mutate(variable = fct_recode(variable, !!!traslation_tables$EE))
 
 EE_both_effects[["wide"]] <- EE_both_effects[["long"]]  %>% 
@@ -208,9 +204,7 @@ First we need to remove missing cases.
  
 EE_both_effects[["wide_no_na"]] <- na.omit(EE_both_effects[["wide"]])
 paste("For EE data: Of", nrow(EE_both_effects$wide),"cases", nrow(EE_both_effects$wide_no_na),"are left due to missing data,")
-
 # let's take this sample
-
 
 Ren_both_effects[["wide_no_na"]] <- na.omit(Ren_both_effects[["wide"]]) %>% 
   filter(country_code %in% EE_both_effects[["wide_no_na"]]$country_code)
@@ -226,7 +220,6 @@ tibble(
     in_sample = if_else(in_sample, "In the finale sample", "Missing")
   ) %>% 
   tab_df()
-
 
 
 # Subsample for checking the robustness of the model
@@ -268,7 +261,6 @@ For the analysis of the RE data: P_ambition and S_coal are skewed to the right.
 ```{r variable transformation}
 
 
-
 Ren_both_effects[["wide_no_na"]] <- Ren_both_effects[["wide_no_na"]]
 
 
@@ -277,7 +269,8 @@ EE_both_effects[["wide_no_na"]] <- EE_both_effects[["wide_no_na"]]
 ```
 
 After transformation, it is still very skewed. Probably not good results if used. 
- 
+
+
 # 1. REN Performance
 
 ## Full model construction 
@@ -292,7 +285,6 @@ formulas[["REN_perf_full"]] <- formula(RE_perf ~
 
 full_models[["RE"]][["01_untransformed"]] <- lm(
   formula = formulas[["REN_perf_full"]], data = Ren_both_effects[["wide_no_na"]])
-
 
 summary(full_models$RE$`01_untransformed`)
 
@@ -310,7 +302,7 @@ GGally::ggcorr(Ren_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2,
 All correlations above 0.8 are problematic. We don't find any. Let's also check this numerically based on the full (transfomred) model.
 
 ```{r}
-vif(full_models$RE$`01_untransformed`)
+faraway::vif(full_models$RE$`01_untransformed`)
 ```
 VIF above 5 is critical and above 10 dangerous. S_GAV and S_effort are slightly collinear, but no critical VIFs. We do not need to exclude any of our IVs.
 
@@ -344,6 +336,58 @@ resplot(full_models[["RE"]][["03_selected"]])
 
 All in all, statistical assumptions are fulfilled an the conclusions drawn from it are robust.
 
+
+# 1a. REN Performance absolute
+
+## Full model 
+
+```{r}
+full_models[["RE_perf_abs"]][["01_untransformed"]] <- lm(
+  
+  RE_perf_abs ~ 
+    P_density + P_ambition + P_REN +
+    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_GDP, 
+  
+    data = Ren_both_effects[["wide_no_na"]])
+
+summary(full_models$RE$`01_untransformed`)
+```
+
+## Collinearity check
+
+```{r, warning=FALSE, echo=FALSE}
+GGally::ggcorr(Ren_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2, label_size = 3, legend.position = "bottom", legend.size = 10)
+```
+
+All correlations above 0.8 are problematic. We don't find any.
+
+```{r}
+faraway::vif(full_models$RE$`01_untransformed`)
+```
+VIF above 5 is critical and above 10 dangerous. P_density, S_GAV and S_potential have critical VIFs
+
+## Math variable selection
+
+```{r}
+full_models[["RE_perf_abs"]][["03_selected"]] <- step(
+  full_models[["RE_perf_abs"]][["01_untransformed"]], direction = "backward", trace = 0)
+summary(full_models[["RE_perf_abs"]][["03_selected"]])
+
+```
+Results could be skewed due to collinearities, as all 3 critical IV are included.
+
+## Checking Model assumptions
+
+It is very important that some assumptions are fulfilled. Otherwise, the findings may be wrong and can not be generalised. 
+
+
+```{r}
+resplot(full_models[["RE_perf_abs"]][["03_selected"]])
+```
+
+Looks ok. 
+
+
 # 2. EE Performance 
 
 ## Full model construction 
@@ -374,7 +418,7 @@ GGally::ggcorr(EE_both_effects$wide_no_na %>% select(-EE_perf), nbreaks = 5, lab
 ```
 
 ```{r}
-vif(full_models$EE$`01_untransformed`)
+faraway::vif(full_models$EE$`01_untransformed`)
 ```
 
 
@@ -402,6 +446,53 @@ EE_both_effects[["wide_no_na"]] %>%
   slice(c(16, 6))
 ```
 
+# 2a. EE Performance absolute
+
+## Full model 
+
+```{r}
+full_models[["EE_perf_abs"]][["01_untransformed"]] <- lm(
+  
+  EE_perf_abs ~ 
+    P_density + P_ambition + P_REN +
+    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_GDP, 
+  
+    data = EE_both_effects[["wide_no_na"]])
+
+summary(full_models$EE_perf_abs$`01_untransformed`)
+```
+
+## Collinearity check
+
+```{r, warning=FALSE, echo=FALSE}
+GGally::ggcorr(EE_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2, label_size = 3, legend.position = "bottom", legend.size = 10)
+```
+
+All correlations above 0.8 are problematic. We don't find any.
+
+```{r}
+faraway::vif(full_models$EE_perf_abs$`01_untransformed`)
+```
+VIF above 5 is critical and above 10 dangerous. Multiple variable have critical VIFs. In particular S_potential. Needs to be fixed.
+
+## Math variable selection
+
+```{r}
+full_models[["EE_perf_abs"]][["03_selected"]] <- step(
+  full_models[["EE_perf_abs"]][["01_untransformed"]], direction = "backward", trace = 0)
+summary(full_models[["EE_perf_abs"]][["03_selected"]])
+
+```
+**Results could be skewed** due to collinearities, as all 3 critical IV are included.
+
+## Checking Model assumptions
+
+
+```{r}
+resplot(full_models[["EE_perf_abs"]][["03_selected"]])
+```
+
+Could be off, Scale-Location plot looks off.
 
 
 # 3. REN Ambition
@@ -432,7 +523,7 @@ GGally::ggcorr(Ren_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2,
 ```
 
 ```{r}
-vif(full_models$RE_amb$`01_untransformed`)
+faraway::vif(full_models$RE_amb$`01_untransformed`)
 ```
 
 S_potential may be slightly collinear with S_effort, however it's still below 10. So not extremely problematic, but a bit if both variables will be in the final model.
@@ -460,7 +551,7 @@ I'm not sure that we can trust this model. The Tukey-Anscombe plot is skewed, pr
 ```{r}
 # Check outlier
 Ren_both_effects[["wide_no_na"]] %>% 
-  slice(c(11))
+  slice(c(6))
 ```
 
 
@@ -491,7 +582,7 @@ GGally::ggcorr(EE_both_effects$wide_no_na, nbreaks = 5, label = TRUE, size = 2,l
 ```
 
 ```{r}
-vif(full_models$EE_amb$`01_untransformed`)
+faraway::vif(full_models$EE_amb$`01_untransformed`)
 ```
 
 S_potential could be collinear with S_GDP
@@ -517,29 +608,33 @@ resplot(full_models[["EE_amb"]][["03_selected"]])
 
 These assumption plots are not ideal, but no highly influential outliers.
 
-# Overview tables
-
+#full tables
 ```{r}
-tab_model(
-  full_models$RE$`03_selected`, full_models$EE$`03_selected`,
-  dv.labels = c("RE performance", "EE performance"),
-  pred.labels = variable_names,
-  title = "Explaining REN Performance",
-  p.style = "stars",
-  show.std = TRUE,
-  p.threshold = c(0.1, 0.05, 0.01),
-  digits = 3)
+print_table_of_models <- function(variable, title = ""){
+  
+  tab_model(
+    full_models[[variable]][["01_untransformed"]], 
+    full_models[[variable]][["03_selected"]],
+    dv.labels = c("Full model", "Selected model"),
+    pred.labels = variable_names,
+    title = title,
+    p.style = "stars",
+    show.std = TRUE,
+    p.threshold = c(0.1, 0.05, 0.01),
+    digits = 3)
+  
+}
+
 ```
 
-
 ```{r}
-tab_model(
-  full_models$RE_amb$`03_selected`, full_models$EE_amb$`03_selected`,
-  dv.labels = c("RE ambition", "EE ambition"),
-  pred.labels = variable_names,
-  title = "Explaining REN Ambition",
-  p.style = "stars",
-  show.std = TRUE,
-  p.threshold = c(0.1, 0.05, 0.01),
-  digits = 3)
+
+print_table_of_models("RE", "Explaining REN Performance (relative)")
+print_table_of_models("RE_perf_abs", "Explaining REN Performance (absolute)")
+print_table_of_models("RE_amb", "Explaining REN Ambition")
+
+print_table_of_models("EE", "Explaining EE Performance (relative)")
+print_table_of_models("EE_perf_abs", "Explaining EE Performance (absolute)")
+print_table_of_models("EE_amb", "Explaining EE Ambition")
+
 ```
