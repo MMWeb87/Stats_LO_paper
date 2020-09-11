@@ -19,3 +19,6 @@ Changed IV and DVs
 - Removed renv
 - collinearity test only for selected models
 - Restructured
+
+## v7
+- added possibility to make custom models that are informed by stepwise selection, but with theorethic adjustments
