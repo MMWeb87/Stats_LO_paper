@@ -115,10 +115,13 @@ select_model_and_print_analytics <- function(model){
   
   selected_model <- step(model, direction = "backward", trace = 0)
   
+
   summary(selected_model) %>% print()
-  faraway::vif(selected_model) %>% print()
   
-  resplot(selected_model)
+  if(gloabl_show_analytics){
+    faraway::vif(selected_model) %>% print()
+    resplot(selected_model)
+  }
   
   return(selected_model)
 }
@@ -134,5 +137,33 @@ check_outlier <- function(nrs, data = "RE"){
   }
   
 }
+
+
+
+custom_model_analytics <- function(model){
+
+  summary(model) %>% print()
+  
+  if(gloabl_show_analytics == TRUE){
+    faraway::vif(model) %>% print()
+    resplot(model)
+  }
+  
+}
+
+custom_EE_model <- function(formula, mydata = EE_both_effects[["wide_no_na"]]){
+  model <- lm(formula, mydata)
+  
+  summary(model) %>% print()
+  
+  if(gloabl_show_analytics == TRUE){
+    faraway::vif(model) %>% print()
+    resplot(model)
+  }
+  
+  model
+}
+
+
 
 

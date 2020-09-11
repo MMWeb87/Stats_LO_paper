@@ -1,12 +1,13 @@
 ---
 title: "Statistical Analysis of Lana's dataset"
-subtitle: "v6 - 2020-09-11"
+subtitle: "v7 - 2020-09-11"
 output:
   html_document:
     df_print: paged
     toc: true
   pdf_document: default
   word_document: default
+
 ---
 
 # Install
@@ -22,6 +23,7 @@ library(readxl)
 library(sjPlot)
 library(sjmisc)
 library(sjlabelled)
+
 ```
 
 
@@ -52,18 +54,12 @@ If all statistical assumptions are fulfilled, the generalisation is possible and
 load(file = "environment_20200911.RData")
 rm(list=setdiff(ls(), "combined_analysis"))
 
+gloabl_show_analytics <- FALSE
+
 ```
 
 ```{r load functions, include=FALSE}
 source("functions.R")
-
-partial_models <- list()
-partial_models[["RE"]] <- list()
-partial_models[["EE"]] <- list()
-partial_models[["RE_perf_abs"]] <- list()
-partial_models[["EE_perf_abs"]] <- list()
-partial_models[["RE_amb"]] <- list()
-partial_models[["EE_amb"]] <- list()
 
 full_models <- list()
 full_models[["RE"]] <- list()
@@ -241,6 +237,8 @@ GGally::ggcorr(EE_both_effects$wide_no_na %>% select(-EE_perf), nbreaks = 5, lab
 
 ## 1) REN Performance (relative)
 
+### Full model
+
 ```{r}
 
 full_models[["RE"]][["01_untransformed"]] <- lm(
@@ -249,10 +247,12 @@ full_models[["RE"]][["01_untransformed"]] <- lm(
     S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_GDP
   , data = Ren_both_effects[["wide_no_na"]])
 
-#summary(full_models$RE$`01_untransformed`)
-#faraway::vif(full_models$RE$`01_untransformed`)
+summary(full_models$RE$`01_untransformed`)
+faraway::vif(full_models$RE$`01_untransformed`)
 
 ```
+
+### Stepwise selection
 
 ```{r}
 full_models[["RE"]][["03_selected"]] <- select_model_and_print_analytics(
@@ -262,10 +262,28 @@ full_models[["RE"]][["03_selected"]] <- select_model_and_print_analytics(
 
 Assumptions look ok
 
+### Custom model
+
+```{r}
+
+# Copy formula from full or stepwise model and customise 
+full_models[["RE"]][["04_custom"]] <- lm(
+  RE_perf ~  
+    P_density + P_ambition + P_REN +
+    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_GDP,
+  Ren_both_effects[["wide_no_na"]]
+  )
+
+custom_model_analytics(full_models[["RE"]][["04_custom"]])
+
+```
+
+
+
 
 ## 2) REN Performance (absolute)
 
-
+### Full model
 ```{r}
 full_models[["RE_perf_abs"]][["01_untransformed"]] <- lm(
   
@@ -275,19 +293,33 @@ full_models[["RE_perf_abs"]][["01_untransformed"]] <- lm(
   
     data = Ren_both_effects[["wide_no_na"]])
 
-#summary(full_models$RE$`01_untransformed`)
+summary(full_models$RE$`01_untransformed`)
 #faraway::vif(full_models$RE$`01_untransformed`)
 
 
 ```
 
-
+### Stepwise
 ```{r}
 full_models[["RE_perf_abs"]][["03_selected"]] <- select_model_and_print_analytics(
   full_models[["RE_perf_abs"]][["01_untransformed"]])
 ```
 
 Looks ok.
+
+### Custom
+
+```{r}
+# Copy formula from full or stepwise model and customise 
+full_models[["RE_perf_abs"]][["04_custom"]] <- lm(
+  RE_perf_abs ~  
+    P_density + P_ambition + P_REN +
+    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_GDP,
+  Ren_both_effects[["wide_no_na"]]
+  )
+
+custom_model_analytics(full_models[["RE_perf_abs"]][["04_custom"]])
+```
 
 
 ## 3) REN Ambition
@@ -317,18 +349,31 @@ warning("Check assumptions")
 check_outlier(11, data = "RE")
 ```
 
+### Custom
+
+```{r}
+# Copy formula from full or stepwise model and customise 
+full_models[["RE_amb"]][["04_custom"]] <- lm(
+P_ambition ~ 
+    P_density + P_REN + 
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_GDP,
+  Ren_both_effects[["wide_no_na"]]
+  )
+
+custom_model_analytics(full_models[["RE_amb"]][["04_custom"]])
+
+```
 
 ## 4) EE Performance (relative)
 
 ```{r}
 
-formulas[["EE_perf_full"]] <- formula(EE_perf ~  
-    P_density + P_ambition + P_REN +
-    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_GDP)
-
 full_models[["EE"]][["01_untransformed"]] <- lm(
-  formula = formulas[["EE_perf_full"]] , data = EE_both_effects[["wide_no_na"]])
-  
+  EE_perf ~  
+    P_density + P_ambition + P_REN +
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_GDP
+  , data = EE_both_effects[["wide_no_na"]])
+
 #filter(!(country_code %in% c("RO","EE"))
 #summary(full_models$EE$`01_untransformed`)
 #faraway::vif(full_models$EE$`01_untransformed`)
@@ -346,6 +391,22 @@ Assumptions critical, but iinside resamples area, so acceptable.
 
 ```{r}
 check_outlier(c(16), "EE")
+```
+
+
+### Custom
+(same results as in v4)
+
+```{r}
+
+# Copy formula from full or stepwise model and customise 
+full_models[["EE"]][["04_custom"]] <- lm(
+  EE_perf ~ P_ambition + S_GAV + S_potential + S_effort + S_PPS,
+  EE_both_effects[["wide_no_na"]]
+  )
+
+custom_model_analytics(full_models[["EE"]][["04_custom"]])
+
 ```
 
 ## 5) EE Performance absolute
@@ -375,6 +436,21 @@ full_models[["EE_perf_abs"]][["03_selected"]] <- select_model_and_print_analytic
 
 Assumptions may be slightly violated.
 
+### Custom
+
+```{r}
+
+# Copy formula from full or stepwise model and customise 
+full_models[["EE_perf_abs"]][["04_custom"]] <- lm(
+  EE_perf_abs ~ 
+    P_density + P_ambition + P_REN +
+    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_GDP,
+  EE_both_effects[["wide_no_na"]]
+  )
+
+custom_model_analytics(full_models[["EE_perf_abs"]][["04_custom"]])
+
+```
 
 ## 6) EE Ambition
 
@@ -397,6 +473,22 @@ full_models[["EE_amb"]][["03_selected"]] <- select_model_and_print_analytics(ful
 
 Assumptions slightly skewed, particularly 0-error assumptions, however withing resampled area. So acceptable.
 
+### Custom
+
+```{r}
+
+# Copy formula from full or stepwise model and customise 
+full_models[["EE_amb"]][["04_custom"]] <- lm(
+  P_ambition ~ 
+    P_density + P_REN + 
+    S_GAV + S_potential + S_effort + S_PPS + S_elec + S_centr  + S_GDP,
+  EE_both_effects[["wide_no_na"]]
+  )
+
+custom_model_analytics(full_models[["EE_amb"]][["04_custom"]])
+
+```
+
 
 
 # Result tables
@@ -407,7 +499,9 @@ print_table_of_models <- function(variable, title = ""){
   tab_model(
     full_models[[variable]][["01_untransformed"]], 
     full_models[[variable]][["03_selected"]],
-    dv.labels = c("Full model", "Selected model"),
+    full_models[[variable]][["04_custom"]],
+
+    dv.labels = c("Full model", "Selected model", "Custom"),
     pred.labels = variable_names,
     title = title,
     p.style = "stars",
