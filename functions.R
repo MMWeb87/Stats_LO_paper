@@ -110,3 +110,29 @@ get_fstats <- function(model){
   
 }
 
+
+select_model_and_print_analytics <- function(model){
+  
+  selected_model <- step(model, direction = "backward", trace = 0)
+  
+  summary(selected_model) %>% print()
+  faraway::vif(selected_model) %>% print()
+  
+  resplot(selected_model)
+  
+  return(selected_model)
+}
+
+check_outlier <- function(nrs, data = "RE"){
+  
+  if(data == "RE"){
+    Ren_both_effects[["wide_no_na"]] %>% 
+      slice(nrs)
+  } else {
+    EE_both_effects[["wide_no_na"]] %>% 
+      slice(nrs)
+  }
+  
+}
+
+
