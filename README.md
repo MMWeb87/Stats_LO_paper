@@ -12,3 +12,10 @@ Added S_GPD and also make two analyses with removed outlier.
 ## V5
 
 Changed IV and DVs
+
+## V6
+
+- Larger sample again (fixed in data). 
+- Removed renv
+- collinearity test only for selected models
+- Restructured
