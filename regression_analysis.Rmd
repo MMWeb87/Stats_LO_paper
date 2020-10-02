@@ -2,12 +2,11 @@
 title: "Statistical Analysis of Lana's dataset"
 subtitle: "v7 - 2020-09-11"
 output:
+  word_document: default
+  pdf_document: default
   html_document:
     df_print: paged
     toc: true
-  pdf_document: default
-  word_document: default
-
 ---
 
 # Install
@@ -51,7 +50,7 @@ If all statistical assumptions are fulfilled, the generalisation is possible and
 
 ```{r load data (from env), echo = FALSE}
 
-load(file = "environment_20200911.RData")
+load(file = "environment_20200917.RData")#changed from 20200911
 rm(list=setdiff(ls(), "combined_analysis"))
 
 gloabl_show_analytics <- FALSE
@@ -82,9 +81,9 @@ Let's have a look at the original data. We remove several variables that, from a
 ```{r dataview}
 #summary(combined_analysis)
 
-combined_analysis_transformed <- combined_analysis %>% 
-  mutate(
-    pre_potential_EI = pre_potential_EI / 100)
+combined_analysis_transformed <- combined_analysis #%>% 
+  #mutate(
+    #pre_potential_EI = pre_potential_EI / 100)
 
 summary(combined_analysis_transformed)
 
@@ -401,7 +400,7 @@ check_outlier(c(16), "EE")
 
 # Copy formula from full or stepwise model and customise 
 full_models[["EE"]][["04_custom"]] <- lm(
-  EE_perf ~ P_ambition + S_GAV + S_potential + S_effort + S_PPS,
+  EE_perf ~ P_density + S_PPS +  S_effort + S_centr + S_GDP,
   EE_both_effects[["wide_no_na"]]
   )
 
@@ -443,8 +442,8 @@ Assumptions may be slightly violated.
 # Copy formula from full or stepwise model and customise 
 full_models[["EE_perf_abs"]][["04_custom"]] <- lm(
   EE_perf_abs ~ 
-    P_density + P_ambition + P_REN +
-    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_GDP,
+    P_ambition +
+    S_effort + S_centr + S_GDP,
   EE_both_effects[["wide_no_na"]]
   )
 
