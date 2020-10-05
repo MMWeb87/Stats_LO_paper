@@ -1,12 +1,12 @@
 ---
 title: "Statistical Analysis of Lana's dataset"
-subtitle: "v7 - 2020-09-11"
+subtitle: "v8 - 2020-11-02"
 output:
-  word_document: default
-  pdf_document: default
   html_document:
     df_print: paged
     toc: true
+  pdf_document: default
+  word_document: default
 ---
 
 # Install
@@ -50,10 +50,10 @@ If all statistical assumptions are fulfilled, the generalisation is possible and
 
 ```{r load data (from env), echo = FALSE}
 
-load(file = "environment_20200917.RData")#changed from 20200911
+load(file = "environment_20200917.RData")
 rm(list=setdiff(ls(), "combined_analysis"))
 
-gloabl_show_analytics <- FALSE
+gloabl_show_analytics <- TRUE
 
 ```
 
@@ -234,7 +234,7 @@ GGally::ggcorr(EE_both_effects$wide_no_na %>% select(-EE_perf), nbreaks = 5, lab
 ```
 # Results
 
-## 1) REN Performance (relative)
+## 1) REN Performance relative (Renewable energy target performance)
 
 ### Full model
 
@@ -280,7 +280,7 @@ custom_model_analytics(full_models[["RE"]][["04_custom"]])
 
 
 
-## 2) REN Performance (absolute)
+## 2) REN Performance absolute (system change)
 
 ### Full model
 ```{r}
@@ -322,8 +322,9 @@ custom_model_analytics(full_models[["RE_perf_abs"]][["04_custom"]])
 
 
 ## 3) REN Ambition
+Not used  currently.
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 
 full_models[["RE_amb"]][["01_untransformed"]] <- lm(
   P_ambition ~ 
@@ -337,20 +338,20 @@ full_models[["RE_amb"]][["01_untransformed"]] <- lm(
 
 ```
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 full_models[["RE_amb"]][["03_selected"]] <- select_model_and_print_analytics(full_models[["RE_amb"]][["01_untransformed"]])
 ```
 
 Assumptions of homoscedasticity are violated, and there is an influential outlier
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 warning("Check assumptions")
 check_outlier(11, data = "RE")
 ```
 
 ### Custom
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 # Copy formula from full or stepwise model and customise 
 full_models[["RE_amb"]][["04_custom"]] <- lm(
 P_ambition ~ 
@@ -363,7 +364,7 @@ custom_model_analytics(full_models[["RE_amb"]][["04_custom"]])
 
 ```
 
-## 4) EE Performance (relative)
+## 4) EE Performance relative (system change)
 
 ```{r}
 
@@ -407,6 +408,8 @@ full_models[["EE"]][["04_custom"]] <- lm(
 custom_model_analytics(full_models[["EE"]][["04_custom"]])
 
 ```
+
+Redisdual not 0 for higher values but still in random resampling area.
 
 ## 5) EE Performance absolute
 
@@ -452,9 +455,9 @@ custom_model_analytics(full_models[["EE_perf_abs"]][["04_custom"]])
 ```
 
 ## 6) EE Ambition
+Not used  currently.
 
-
-```{r}
+```{r eval=FALSE, include=FALSE}
 
 full_models[["EE_amb"]][["01_untransformed"]] <- lm(
   P_ambition ~ 
@@ -466,7 +469,7 @@ full_models[["EE_amb"]][["01_untransformed"]] <- lm(
 ```
 
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 full_models[["EE_amb"]][["03_selected"]] <- select_model_and_print_analytics(full_models[["EE_amb"]][["01_untransformed"]])
 ```
 
@@ -474,7 +477,7 @@ Assumptions slightly skewed, particularly 0-error assumptions, however withing r
 
 ### Custom
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 
 # Copy formula from full or stepwise model and customise 
 full_models[["EE_amb"]][["04_custom"]] <- lm(
@@ -516,10 +519,10 @@ print_table_of_models <- function(variable, title = ""){
 
 print_table_of_models("RE", "Explaining REN Performance (relative)")
 print_table_of_models("RE_perf_abs", "Explaining REN Performance (absolute)")
-print_table_of_models("RE_amb", "Explaining REN Ambition")
+#print_table_of_models("RE_amb", "Explaining REN Ambition")
 
 print_table_of_models("EE", "Explaining EE Performance (relative)")
 print_table_of_models("EE_perf_abs", "Explaining EE Performance (absolute)")
-print_table_of_models("EE_amb", "Explaining EE Ambition")
+#print_table_of_models("EE_amb", "Explaining EE Ambition")
 
 ```
