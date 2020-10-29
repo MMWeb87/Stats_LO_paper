@@ -1,6 +1,6 @@
 ---
 title: "Statistical Analysis of Lana's dataset"
-subtitle: "v8 - 2020-11-02"
+subtitle: "v9 - 2020-10-29"
 output:
   html_document:
     df_print: paged
@@ -213,11 +213,25 @@ EE_both_effects %>%
     labs(title = "Marginal plots for EE data")
 
 ```
+S_effort in REN data is right skewed and leads to the predictors having the wrong sign in the models. We log-transform.
 
 ```{r variable transformation}
 
-Ren_both_effects[["wide_no_na"]] <- Ren_both_effects[["wide_no_na"]]
-EE_both_effects[["wide_no_na"]] <- EE_both_effects[["wide_no_na"]]
+#Ren_both_effects[["wide_no_na"]] <- Ren_both_effects[["wide_no_na"]] %>% 
+
+# Test of transformation (however, I applied it directly in the formula)
+# Ren_both_effects[["wide_no_na"]] <- Ren_both_effects[["wide_no_na"]] %>% 
+#  mutate(S_effort = log(S_effort))
+
+# Ren_both_effects[["wide_no_na"]] %>% 
+#   gather(-country_code, key = "variable", value = "value") %>% 
+#     ggplot(mapping = aes(x = value)) +
+#     geom_histogram()+
+#     facet_wrap("variable", scales = "free") +
+#     labs(title = "Marginal plots for REN data")
+
+
+#EE_both_effects[["wide_no_na"]] <- EE_both_effects[["wide_no_na"]]
 
 ```
 
@@ -309,15 +323,15 @@ Looks ok.
 ### Custom
 
 ```{r}
-# Copy formula from full or stepwise model and customise 
+
 full_models[["RE_perf_abs"]][["04_custom"]] <- lm(
-  RE_perf_abs ~  
-    P_density + P_ambition + P_REN +
-    S_GAV + S_potential + S_effort + S_PPS + S_elec  + S_centr + S_GDP,
+RE_perf_abs ~ P_density + P_ambition + P_REN + S_GAV + 
+    S_potential + log(S_effort) + S_PPS,
   Ren_both_effects[["wide_no_na"]]
   )
 
 custom_model_analytics(full_models[["RE_perf_abs"]][["04_custom"]])
+
 ```
 
 
@@ -364,7 +378,7 @@ custom_model_analytics(full_models[["RE_amb"]][["04_custom"]])
 
 ```
 
-## 4) EE Performance relative (system change)
+## 4) EE Performance relative (Renewable energy target performance)
 
 ```{r}
 
@@ -395,14 +409,16 @@ check_outlier(c(16), "EE")
 
 
 ### Custom
-(same results as in v4)
+
 
 ```{r}
 
 # Copy formula from full or stepwise model and customise 
 full_models[["EE"]][["04_custom"]] <- lm(
   EE_perf ~ P_density + S_PPS +  S_effort + S_centr + S_GDP,
-  EE_both_effects[["wide_no_na"]]
+  #EE_perf ~ P_density + S_centr + P_ambition,
+
+    EE_both_effects[["wide_no_na"]]
   )
 
 custom_model_analytics(full_models[["EE"]][["04_custom"]])
@@ -411,7 +427,8 @@ custom_model_analytics(full_models[["EE"]][["04_custom"]])
 
 Redisdual not 0 for higher values but still in random resampling area.
 
-## 5) EE Performance absolute
+## 5) EE Performance absolute (system change)
+
 
 ```{r}
 full_models[["EE_perf_abs"]][["01_untransformed"]] <- lm(
@@ -524,5 +541,8 @@ print_table_of_models("RE_perf_abs", "Explaining REN Performance (absolute)")
 print_table_of_models("EE", "Explaining EE Performance (relative)")
 print_table_of_models("EE_perf_abs", "Explaining EE Performance (absolute)")
 #print_table_of_models("EE_amb", "Explaining EE Ambition")
+
+
+
 
 ```
