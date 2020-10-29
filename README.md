@@ -22,3 +22,6 @@ Changed IV and DVs
 
 ## v7
 - added possibility to make custom models that are informed by stepwise selection, but with theorethic adjustments
+
+## v9
+- log-transformation of single predictor to make more stable
